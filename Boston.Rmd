@@ -1,0 +1,150 @@
+---
+title: "Housing Values in Suburbs of Boston"
+author: Paras Ahuja
+output: html_notebook
+---
+<style type="text/css">
+
+body, td {
+   font-size: 16px;
+}
+code.r{
+  font-size: 16px;
+}
+pre {
+  font-size: 16px
+}
+</style>
+
+### Motivation and Goals
+
+The data set is standard and is easily obtained from MASS library in R. Our goal is to perform **Exploratory Data Analysis** on this data set and see what insights we can gain. 
+
+We are focused on crime rate and how different features impact crime rate.
+
+### Exploratory Data Analysis
+
+We begin by loading the data set into our RStudio environment. Since the data set is in MASS library, simply loading the library will provide us access to this data set.
+
+```{r}
+library(MASS)
+data("Boston")
+```
+
+Now that the library is loaded, let's find out the dimension of this data set.
+
+```{r}
+dim(Boston)
+```
+Our data set contains 506 observations and 14 features. Let's find out if there are any missing values in the data set. 
+
+```{r}
+sum(is.na(Boston))
+```
+There are no value marked as NA in our data set. Let's take a look at how our data set appears. 
+
+```{r}
+head(Boston)
+```
+```{r}
+summary(Boston)
+```
+
+
+Let's see how these features in our data set correlate. However, since we are only focused on crime rate, we will simply look at crime rate and features that have a correlation with it. 
+
+**NOTE:** If we were building a predictive model, we would have to focus on multicollinearity and therefore correlation of each feature with other feature will be of importance too but we are only performing EDA with crime rate as the focus. 
+
+```{r}
+cor(Boston, method="pearson")[1,]
+```
+We notice that crime rate is highest when there is high accessibility to radial highways. This could be because once a person has committed a crime, they can easily get away from the crime scene. Let's verify this when rad is greater than the median of 5 and less than 5. 
+```{r}
+mean(Boston[Boston$rad >= 5, ]$crim)
+```
+
+```{r}
+mean(Boston[Boston$rad < 5, ]$crim)
+```
+Our median rad is 5, which means that we are can expect to see approximately 50% of the data on either side of this value, we notice that lower rad means lower average crime rate and rad rises, crime rate rises along with it. This indicates that accessibility to radial highways definitely has an impact on the crime rate.
+
+Let's create some plots and graphs to visualize the information we have so far. 
+
+```{r}
+rad <- as.factor(Boston$rad)
+plot(x=rad, y=Boston$crim, 
+     xlab="Accessibility to Radial Highways", 
+     ylab="Crime Rate",
+     main="Crime Rate and Accessibility to Radial Highways")
+```
+We have an outlier index for rad in our data set. While most of the accessibility index ratings are between 1 - 8, we have a rating of 24 that maybe skewing our results. Let's dig deeper and see how the data fares if we discount index rating of 24. 
+
+```{r}
+boston <- Boston[Boston$rad < 24, ]
+mean(boston$crim)
+```
+```{r}
+boston <- Boston[Boston$rad == 24, ]
+mean(boston$crim)
+```
+Let's find out how many suburbs actually have a rating of 24. 
+
+```{r}
+dim(boston)
+```
+Our data set contains 506 observations out of which 132 belong to rad rating of 24. 
+
+```{r}
+132/506
+```
+Approximately 26.08% of our data is being impacted by this. Let's see what our correlations look like if we remove rad rating of 24. 
+
+```{r}
+boston <- Boston[Boston$rad < 24, ]
+cor(boston, method="pearson")[, 1]
+```
+We no longer have such a high correlation with rad anymore. Removing high rad rating is also leading us to see that there is a high correlation between crime rate and nox, which is nitrogen oxides concentration. EPA states the following about NO2:
+
+Breathing air with a high concentration of NO2 can irritate airways in the human respiratory system. Such exposures over short periods can aggravate respiratory diseases, particularly asthma, leading to respiratory symptoms (such as coughing, wheezing or difficulty breathing), hospital admissions and visits to emergency rooms. Longer exposures to elevated concentrations of NO2 may contribute to the development of asthma and potentially increase susceptibility to respiratory infections. People with asthma, as well as children and the elderly are generally at greater risk for  the health effects of NO2.
+
+More information on NO2 can be obtained from [here](https://www.epa.gov/no2-pollution/basic-information-about-no2).
+
+We can conclude that discounting for accessibility to radial highways, NO2 is the most important factor. 
+
+Our top three correlations are industrial area, high levels of N02, and age.
+
+#### NO2
+
+```{r}
+boxplot(boston$nox, horizontal=T, col="#52BE80",
+        xlab="Levels of Nox", 
+        main="Boxplot of Nox Levels in Suburbs of Boston")
+```
+
+There seems to be only one outlier in this group. Let's go ahead and take a look at the range of N02. 
+
+```{r}
+range(boston$nox)
+```
+```{r}
+boston <- boston[boston$nox < 0.8, ]
+boxplot(boston$nox, horizontal=T, col="#BDC3C7",
+        xlab="Levels of Nox", 
+        main="Boxplot of Nox Levels in Suburbs of Boston")
+```
+
+Let's check if this changes our correlation or not. 
+
+```{r}
+cor(boston, method="pearson")[, 1]
+```
+So far we have removed two outliers, and these are as follows: 
+
+1. rad rating of 24
+2. nox of 0.871
+
+At this point we can say that high accessibility rating to radial highways, and high levels of nox in the environment are a significant contributing factor to the crime rates in Boston suburbs. 
+
+We are seeing that our correlations have definitely changed however, our top 3 choice still remain top 3. 
+
+
