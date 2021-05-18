@@ -1,0 +1,273 @@
+---
+title: "U.S. University/Colleges Data Set"
+author: Paras Ahuja
+output: html_notebook
+---
+<style type="text/css">
+
+body, td {
+   font-size: 16px;
+}
+code.r{
+  font-size: 16px;
+}
+pre {
+  font-size: 16px
+}
+</style>
+
+## Motivation and Goals
+
+In this notebook we analyze U.S. universities and colleges. Data file is named 'College.csv' and it can be easily obtained from [here](https://www.statlearning.com/resources-first-edition). 
+
+Our goal for this data set is to perform **Exploratory Data Analysis** (EDA). At this point we do not seek to build any predictive models, we are simply looking to gain some insights from the data set. 
+
+Normally, data science process requires cleaning the data and imputing missing values. However, the providers of this data set have ensured its completeness and there are **no** missing values in this data set. Regardless of the data provider's kindness, we will follow data science etiquette, which involves treating the data as if it contained missing values and required cleaning.
+
+## Exploratory Data Analysis
+
+To aid our analysis we begin by loading the data set into our RStudio environment.
+
+```{r}
+college <- read.csv("College.csv", header = T, na.strings = c("", "NA"))
+head(college)
+```
+
+Next lets check the shape of our data set or the dimensions of the data set. 
+
+```{r}
+dim(college)
+```
+
+Now that we have loaded the data set into our environment, we can check if there are any missing values. However, as stated earlier, the data set is clean and complete - we check for good measure and practice. 
+
+```{r}
+sum(is.na(college))
+```
+As we can see the above function returns us a value of 0, indicating that there are no missing values in our data set or values marked as NA.
+
+Also note that when we look at the sample of the data set we see that **X** will actually get treated as a part of the data set for calculations, and we want it to be treated as the name of rows. We can change this by assigning column 1 as row names and deleting column 1 because rownames will represent this information.
+
+```{r}
+rownames(college) <- college[,1]
+college <- college[, -1]
+head(college)
+```
+
+As we can see, first column changed from **X** to row names (this means that the names are no longer treated as a feature vector, which is why **X** is replaced by a whitespace). 
+
+Let's take a look at the summary of this data set.
+
+```{r}
+summary(college)
+```
+Note that Private is qualitative variable, and we need to tell R to treat it as such.
+
+```{r}
+private <- as.factor(college$Private)
+```
+
+Since our goal is conduct EDA and we did not really start with a goal for the data apart from just conducting EDA, let's take a look at a select few features.
+
+**NOTE: This is only for demonstration, if we have a large number of features, we should select a few key features. In the real world having motivation or end goal in mind for the data set is key to analyzing features.**
+
+### Feature Analysis
+
+#### Private
+```{r}
+plot(private, col= c("#7F8C8D", "#2C3E50"), 
+     ylim=c(0, 600), xlab="Private Status", 
+     ylab="Count", main="Private vs Non-Private")
+```
+We notice that vast majority of schools in our data set are private. We can find out exactly how many schools are private vs non-private.
+
+```{r}
+summary(private)
+```
+In our data set we have 565 private schools and the remaining 212 are non-private.
+
+```{r}
+private_table <- table(private)
+prop.table(private_table)
+```
+We notice that 72.71% of schools in our data set are private and the remaining are non-private. According to the [U.S. News](https://www.usnews.com/education/best-colleges/articles/how-many-universities-are-in-the-us-and-why-that-number-is-changing), the U.S. Department of Education lists nearly 4,000 degree-granting academic institutions. In our data set we have 777 of these institutions. 
+
+We have enough data to infer that the vast majority of educational institutions in the U.S. are private. **Caveat: we don't have a lot of information on how the data was collected and what biases it may contain.**
+
+#### Apps
+To analyze applications, we can use a histogram as a tool. Histograms are graphs that display the distribution of your continuous data. 
+```{r}
+hist(college$Apps, col="#2980B9", breaks=30,
+     ylim=c(0, 500), xlim=c(0, 25000), 
+     xlab="Applications", ylab="Frequency", 
+     main="Number of College Applications")
+
+```
+The distribution above does not resemble normal distribution. It appears more like exponential distribution. Let's overlay both exponential and normal distribution curve on top of the histogram of Applications. Before doing that, let's find out mean and standard deviation of Applications.
+
+```{r}
+mew <- mean(college$Apps)
+std <- sd(college$Apps)
+mew;std
+```
+This tells us that on average a college receives 3000 applications per application term. 
+
+```{r}
+hist(college$Apps, col="#B2AAAF", 
+     breaks=30, freq=F, xlim=c(0, 25000),
+     xlab="Applications", ylab="Density", 
+     main="Number of College Applications")
+curve(dnorm(x,mew,std),col="#5AC18E",lwd=2,add=T)
+curve(dexp(x,rate=1/mew),col="black",lwd=2,add=T)
+```
+We notice that college applications follow exponential distribution than normal distribution as exponential distribution better fits the data and describes the data well. 
+
+Exponential distribution often concerns itself with the amount of time until some specific event occurs. College applications are periodic, which would make sense why applications follow exponential distribution.
+
+Let's see how applications received by private vs non-private colleges vary. For this we can use a boxplot. 
+
+```{r}
+plot(private, college$Apps, col="#A569BD", varwidth=F, horizontal=T,
+     ylab="Private Status", xlab="Number of Applications", main="Private vs Non-Private College Applications Boxplot")
+```
+We notice that non-private schools tend to receive more applications than the private ones. Maximum number of applications received by non-private schools are close to 50,000 whereas this number is only approximately 20,000 for private schools. There are also a lot of outliers for private schools.
+
+#### Accept
+
+Let's take a look at how many applicants were actually accepted by the universities. We can also plot a histogram for this feature. 
+
+```{r}
+hist(college$Accept, col="#DAA06D", breaks=30,
+     xlim=c(0, 20000), ylim=c(0, 400),
+     xlab="Accpetances", ylab="Frequency", main="College Acceptances")
+```
+Let's check what the mean and standard deviation look like for college acceptances.
+
+```{r}
+mean(college$Accept)
+sd(college$Accept)
+```
+The histogram appears to follow exponential distribution. We can overlay two histograms and see what they look like.
+
+```{r}
+hist(college$Apps, col="#2980B9", breaks=30,
+     ylim=c(0, 500), xlim=c(0, 25000), 
+     xlab="Applications", ylab="Frequency", 
+     main="Number of College Applications")
+
+hist(college$Accept, col="#DAA06D", breaks=30,
+     xlim=c(0, 20000), ylim=c(0, 400),
+     xlab="Accpetances", ylab="Frequency", 
+     main="College Acceptances", add=T)
+```
+This is natural to see. The histograms show us that colleges receive a lot of applications, and only few people are accepted. However, an interesting question arises: how do acceptances vary for private schools and non-private schools? We can guess that because private schools receive fewer applications, they accept fewer people into their programs.
+
+```{r}
+plot(private, college$Accept, col="#967969", varwidth=F, horizontal=T,
+     ylab="Private Status", xlab="Number of Acceptances", 
+     main="Private vs Non-Private College Acceptances Boxplot")
+```
+The boxplot of applications and acceptances looks quite similar. We can view them side-by-side. This is to be expected because as we saw above, the distributions are quite similar too.
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(private, college$Apps, col="#A569BD", varwidth=T, horizontal=F,
+     ylab="Private Status", xlab="Number of Applications", 
+     main="Private vs Non-Private College Applications Boxplot", 
+     cex.main=0.6, cex.lab=0.6, cex.axis=0.6)
+
+plot(private, college$Accept, col="#967969", varwidth=T, horizontal=F,
+     ylab="Private Status", xlab="Number of Acceptances", 
+     main="Private vs Non-Private College Acceptances Boxplot",
+     cex.main=0.6, cex.lab=0.6, cex.axis=0.6)
+
+```
+
+#### Enroll
+
+For this feature we can hypothesize that students send a lot of applications, a few of those applications are accepted, and a fewer number of students actually enroll into a program. The distribution will yet again be similar to the histograms we saw above. 
+
+```{r}
+hist(college$Enroll, col="#DAA08A", breaks=30,
+     xlim=c(0, 7000), ylim=c(0, 250),
+     xlab="Enrolments", ylab="Frequency", 
+     main="College Enrolments")
+```
+Here, we can ask the following questions:
+
+1. **What is the probability of a student applying to a private school?**
+```{r}
+total_applications <- sum(college$Apps)
+private_applications <- sum(college[college$Private == "Yes", ]$Apps)
+prob_private_app <- private_applications/total_applications
+prob_private_app
+```
+2. **What is the probability of being accepted given application to a private school?**
+
+Probability of getting accepted.
+```{r}
+prob_acceptance <- sum(college$Accept)/total_applications
+prob_acceptance
+```
+Probability of getting accepted by a private school.
+```{r}
+prob_private_acceptance <- sum(college[college$Private == "Yes", ]$Accept)/private_applications
+prob_private_acceptance
+```
+Probability of applying to a private and getting accepted
+```{r}
+prob_private_app_and_private_acceptance <- prob_private_app * prob_private_acceptance
+prob_private_app_and_private_acceptance
+```
+Probability of application given acceptance by private schools.
+
+```{r}
+prob_private_app_given_private_acceptance <- prob_private_app_and_private_acceptance/prob_acceptance
+prob_private_app_given_private_acceptance
+```
+Probability of acceptance given application to private schools.
+
+```{r}
+prob_private_acceptance_given_private_app <- (prob_private_app_given_private_acceptance * prob_private_acceptance)/prob_private_app
+prob_private_acceptance_given_private_app
+```
+This is surprisingly good. Given that I have applied to a private school, I have 0.6479347 chance of being accepted. But this is somewhat skewed because there are a lot of private schools in the U.S. Let's find out what the probability is for elite schools.
+
+#### Elite
+
+We do not have an elite feature but this can be **engineered**. Assuming that most elite schools have students who were top 10 percent in their prior education, we have a Top10perc feature, which we can use.
+
+```{r}
+Elite <- rep("No", nrow(college))
+Elite[college$Top10perc > 50] <- "Yes"
+Elite <- as.factor(Elite)
+```
+
+Let's check how many private elite schools are there in the U.S.
+
+```{r}
+plot(Elite, col=c("#1e81b0", "#38b01e"), 
+     ylim=c(0, 700),
+     xlab="Elite School", ylab="Count", main="Elite Schools in the U.S.")
+```
+Let's find out exactly how many Elite schools are there in the U.S.
+```{r}
+summary(Elite)
+```
+Let's find out top elite schools that receive most applications.
+```{r}
+college$Elite <- Elite
+elite_schools <- college[college$Elite == "Yes", ]
+elite_schools[order(-elite_schools[,2]),][c(2)]
+```
+
+We can see that UC Berkely receives most applications out of all the elite schools. Let's check the acceptance rate of elite schools.
+
+```{r}
+acceptance_rate <- elite_schools$Accept/elite_schools$Apps
+elite_schools$Accept.Rate <- acceptance_rate
+elite_schools[order(elite_schools[,20]),][c(20)]
+```
+
+Princeton has the lowest acceptance rate out of all the schools in our data set. Only 15.44863% of applicants are accepted.
